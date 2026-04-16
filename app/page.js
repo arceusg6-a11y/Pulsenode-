@@ -21,20 +21,39 @@ export default function App() {
     setError(null);
 
     try {
+      console.log(`🔍 Fetching NFTs for ${address} on ${network}...`);
+      
       // Add cache-busting parameter for refresh
       const cacheBuster = forceRefresh ? `&t=${Date.now()}` : '';
-      const response = await fetch(`/api/nfts/${address}?network=${network}${cacheBuster}`);
+      const url = `/api/nfts/${address}?network=${network}${cacheBuster}`;
+      
+      const response = await fetch(url);
       const data = await response.json();
+
+      console.log('📦 API Response:', { 
+        status: response.status, 
+        totalNFTs: data.totalNFTs,
+        error: data.error 
+      });
 
       if (response.ok) {
         setPortfolioData(data);
         setLastFetch(new Date());
+        
+        if (data.totalNFTs === 0) {
+          console.warn('⚠️ No NFTs found for this wallet on', network);
+        } else {
+          console.log(`✅ Successfully loaded ${data.displayedNFTs} NFTs`);
+        }
       } else {
-        setError(data.error || 'Failed to fetch NFTs');
+        const errorMsg = data.error || 'Failed to fetch NFTs';
+        console.error('❌ API Error:', errorMsg);
+        setError(errorMsg);
       }
     } catch (err) {
-      setError('Network error. Please try again.');
-      console.error('Error fetching wallet NFTs:', err);
+      const errorMsg = 'Network error. Please check your connection and try again.';
+      console.error('❌ Network Error:', err);
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -83,24 +102,64 @@ export default function App() {
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-red-500/10 border border-red-500/30 rounded-2xl p-6 text-center"
+                  className="bg-red-500/10 border border-red-500/30 rounded-2xl p-8 text-center"
                 >
-                  <p className="text-red-500 font-semibold">{error}</p>
+                  <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+                    <span className="text-3xl">⚠️</span>
+                  </div>
+                  <h3 className="text-red-500 font-bold text-xl mb-2">Error Loading NFTs</h3>
+                  <p className="text-red-400 mb-4">{error}</p>
+                  <button
+                    onClick={() => setError(null)}
+                    className="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-6 py-2 rounded-lg transition-colors"
+                  >
+                    Dismiss
+                  </button>
                 </motion.div>
               )}
 
               {/* Portfolio Data */}
               {!loading && !error && portfolioData && (
                 <>
-                  {/* Stat Bar */}
-                  <StatBar
-                    totalValue={portfolioData.totalValue}
-                    portfolioPNL={portfolioData.portfolioPNL}
-                    topGainer={topGainer}
-                  />
+                  {portfolioData.totalNFTs === 0 ? (
+                    /* No NFTs Found State */
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-slate-900/50 backdrop-blur-xl border border-slate-800/50 rounded-2xl p-12 text-center"
+                    >
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-500/20 to-blue-500/20 border border-violet-500/30 flex items-center justify-center mx-auto mb-6">
+                        <span className="text-4xl">🔍</span>
+                      </div>
+                      <h3 className="text-2xl font-bold text-white mb-3">No NFTs Found</h3>
+                      <p className="text-slate-400 mb-2">
+                        This wallet doesn't have any NFTs on {portfolioData.network.charAt(0).toUpperCase() + portfolioData.network.slice(1)}
+                      </p>
+                      <p className="text-slate-500 text-sm mb-6">
+                        Wallet: {portfolioData.address.slice(0, 6)}...{portfolioData.address.slice(-4)}
+                      </p>
+                      <div className="flex gap-3 justify-center">
+                        <button
+                          onClick={() => setPortfolioData(null)}
+                          className="bg-slate-800/50 hover:bg-slate-700/50 text-white px-6 py-3 rounded-xl transition-colors"
+                        >
+                          Try Another Wallet
+                        </button>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <>
+                      {/* Stat Bar */}
+                      <StatBar
+                        totalValue={portfolioData.totalValue}
+                        portfolioPNL={portfolioData.portfolioPNL}
+                        topGainer={topGainer}
+                      />
 
-                  {/* NFT Grid */}
-                  <NFTGrid nfts={portfolioData.nfts} />
+                      {/* NFT Grid */}
+                      <NFTGrid nfts={portfolioData.nfts} />
+                    </>
+                  )}
                 </>
               )}
 
