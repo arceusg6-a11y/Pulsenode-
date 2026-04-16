@@ -3,15 +3,20 @@
 import { motion } from 'framer-motion';
 import { formatETH, formatPercentage } from '@/lib/utils/priceUtils';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import Image from 'next/image';
+import { useState } from 'react';
 
 export default function NFTCard({ nft, index }) {
+  const [imageError, setImageError] = useState(false);
   const isProfitable = nft.pnl >= 0;
+
+  const placeholderImage = 'https://via.placeholder.com/400x400/1e293b/64748b?text=NFT';
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
+      transition={{ delay: index * 0.03 }}
       whileHover={{ y: -8, scale: 1.02 }}
       className="group relative overflow-hidden rounded-2xl bg-slate-900/50 backdrop-blur-xl border border-slate-800/50 hover:border-violet-500/50 transition-all duration-300"
     >
@@ -19,14 +24,16 @@ export default function NFTCard({ nft, index }) {
       <div className="absolute inset-0 bg-gradient-to-br from-violet-500/0 to-blue-500/0 group-hover:from-violet-500/10 group-hover:to-blue-500/10 transition-all duration-300" />
 
       {/* NFT Image */}
-      <div className="relative aspect-square overflow-hidden">
-        <img
-          src={nft.image}
+      <div className="relative aspect-square overflow-hidden bg-slate-800/50">
+        <Image
+          src={imageError ? placeholderImage : nft.image}
           alt={nft.name}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-          onError={(e) => {
-            e.target.src = 'https://via.placeholder.com/400x400/1e293b/64748b?text=NFT';
-          }}
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-cover transition-transform duration-300 group-hover:scale-110"
+          onError={() => setImageError(true)}
+          loading="lazy"
+          quality={75}
         />
         
         {/* Hover overlay with floor price vs last sale */}
@@ -59,7 +66,10 @@ export default function NFTCard({ nft, index }) {
 
         {/* P&L Badge */}
         {nft.pnl !== 0 && (
-          <div
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: index * 0.05 + 0.2 }}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg w-fit ${
               isProfitable
                 ? 'bg-green-500/20 border border-green-500/30'
@@ -78,7 +88,7 @@ export default function NFTCard({ nft, index }) {
             >
               {formatPercentage(nft.pnl)}
             </span>
-          </div>
+          </motion.div>
         )}
 
         {/* Token ID */}

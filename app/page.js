@@ -14,17 +14,21 @@ export default function App() {
   const [portfolioData, setPortfolioData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [lastFetch, setLastFetch] = useState(null);
 
-  const fetchWalletNFTs = async (address, network) => {
+  const fetchWalletNFTs = async (address, network, forceRefresh = false) => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`/api/nfts/${address}?network=${network}`);
+      // Add cache-busting parameter for refresh
+      const cacheBuster = forceRefresh ? `&t=${Date.now()}` : '';
+      const response = await fetch(`/api/nfts/${address}?network=${network}${cacheBuster}`);
       const data = await response.json();
 
       if (response.ok) {
         setPortfolioData(data);
+        setLastFetch(new Date());
       } else {
         setError(data.error || 'Failed to fetch NFTs');
       }
@@ -34,6 +38,10 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefresh = async (address, network) => {
+    await fetchWalletNFTs(address, network, true);
   };
 
   // Calculate top gainer
@@ -59,7 +67,7 @@ export default function App() {
               className="space-y-6"
             >
               {/* Wallet Input */}
-              <WalletInput onSubmit={fetchWalletNFTs} loading={loading} />
+              <WalletInput onSubmit={fetchWalletNFTs} loading={loading} onRefresh={handleRefresh} />
 
               {/* Loading State */}
               {loading && (
