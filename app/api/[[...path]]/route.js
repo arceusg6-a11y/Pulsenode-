@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getNFTsForOwner } from '@/lib/alchemy';
 import { getCollectionStats, getNFTByContract } from '@/lib/opensea';
+import { getNFTContractFloorPrice, getCollectionFloorPriceMoralis } from '@/lib/moralis';
 import { getCollectionFloorPrice, getTokenDetails } from '@/lib/reservoir';
 import { estimatePurchasePrice, calculatePNL } from '@/lib/utils/priceUtils';
 
@@ -34,19 +35,31 @@ export async function GET(request) {
           let pnl = 0;
 
           try {
-            // Try OpenSea API first (primary source)
-            const openSeaNFT = await getNFTByContract(
+            // Try Moralis API first (primary source - best for floor prices)
+            const moralisFloorPrice = await getCollectionFloorPriceMoralis(
               nft.contract.address,
-              nft.tokenId
+              network === 'base' ? 'base' : 'eth'
             );
 
-            if (openSeaNFT?.nft) {
-              // Extract floor price from OpenSea data
-              floorPrice = openSeaNFT.nft.collection?.floor_price || 0;
-              lastSale = openSeaNFT.nft.last_sale?.total_price || 0;
+            if (moralisFloorPrice && moralisFloorPrice.floorPrice > 0) {
+              floorPrice = moralisFloorPrice.floorPrice;
             }
 
-            // If OpenSea fails or returns no data, try Reservoir as fallback
+            // If Moralis fails, try OpenSea API as fallback
+            if (floorPrice === 0) {
+              const openSeaNFT = await getNFTByContract(
+                nft.contract.address,
+                nft.tokenId,
+                network === 'base' ? 'base' : 'ethereum'
+              );
+
+              if (openSeaNFT?.nft) {
+                floorPrice = openSeaNFT.nft.collection?.floor_price || 0;
+                lastSale = openSeaNFT.nft.last_sale?.total_price || 0;
+              }
+            }
+
+            // If both fail, try Reservoir as last fallback
             if (floorPrice === 0) {
               const tokenDetails = await getTokenDetails(
                 nft.contract.address,
@@ -56,16 +69,6 @@ export async function GET(request) {
               if (tokenDetails) {
                 floorPrice = tokenDetails.floorPrice || 0;
                 lastSale = tokenDetails.lastSale || 0;
-              }
-            }
-
-            // If still no data, try collection floor price from Reservoir
-            if (floorPrice === 0) {
-              const collectionData = await getCollectionFloorPrice(
-                nft.contract.address
-              );
-              if (collectionData) {
-                floorPrice = collectionData.floorPrice;
               }
             }
 
