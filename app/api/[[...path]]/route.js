@@ -4,6 +4,7 @@ import { getCollectionStats, getNFTByContract } from '@/lib/opensea';
 import { getNFTContractFloorPrice, getCollectionFloorPriceMoralis } from '@/lib/moralis';
 import { getCollectionFloorPrice, getTokenDetails } from '@/lib/reservoir';
 import { estimatePurchasePrice, calculatePNL } from '@/lib/utils/priceUtils';
+import { trackUser, getTotalUsers, getActiveUsers } from '@/lib/db';
 
 // GET /api/
 export async function GET(request) {
@@ -24,6 +25,10 @@ export async function GET(request) {
     const network = searchParams.get('network') || 'ethereum';
 
     try {
+      // Track this user/wallet
+      const ipAddress = request.headers.get('x-forwarded-for') || 'unknown';
+      await trackUser(address, ipAddress);
+
       const nftsData = await getNFTsForOwner(address, network);
       
       // Process NFTs and add floor prices
@@ -149,6 +154,26 @@ export async function GET(request) {
     ];
 
     return NextResponse.json({ activity: mockActivity });
+  }
+
+  // GET /api/stats
+  if (path === '/stats') {
+    try {
+      const totalUsers = await getTotalUsers();
+      const activeUsers = await getActiveUsers();
+
+      return NextResponse.json({
+        totalUsers,
+        activeUsers,
+        message: 'User stats retrieved successfully',
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch stats' },
+        { status: 500 }
+      );
+    }
   }
 
   return NextResponse.json({ error: 'Not found' }, { status: 404 });

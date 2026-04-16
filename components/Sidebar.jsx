@@ -3,6 +3,7 @@
 import { LayoutDashboard, Heart, Activity, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import UserCounter from './UserCounter';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', id: 'dashboard' },
@@ -58,7 +59,11 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         </nav>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 p-6">
+      <div className="absolute bottom-0 left-0 right-0 p-6 space-y-4">
+        {/* User Counter */}
+        <UserCounter />
+
+        {/* Network Status */}
         <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
           <p className="text-xs text-slate-400 mb-2">Network Status</p>
           <div className="flex items-center gap-2">
