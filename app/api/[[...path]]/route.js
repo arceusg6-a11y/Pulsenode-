@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getNFTsForOwner } from '@/lib/alchemy';
+import { getCollectionStats, getNFTByContract } from '@/lib/opensea';
 import { getCollectionFloorPrice, getTokenDetails } from '@/lib/reservoir';
 import { estimatePurchasePrice, calculatePNL } from '@/lib/utils/priceUtils';
 
@@ -33,18 +34,32 @@ export async function GET(request) {
           let pnl = 0;
 
           try {
-            // Try Reservoir API for floor price
-            const tokenDetails = await getTokenDetails(
+            // Try OpenSea API first (primary source)
+            const openSeaNFT = await getNFTByContract(
               nft.contract.address,
               nft.tokenId
             );
 
-            if (tokenDetails) {
-              floorPrice = tokenDetails.floorPrice || 0;
-              lastSale = tokenDetails.lastSale || 0;
+            if (openSeaNFT?.nft) {
+              // Extract floor price from OpenSea data
+              floorPrice = openSeaNFT.nft.collection?.floor_price || 0;
+              lastSale = openSeaNFT.nft.last_sale?.total_price || 0;
             }
 
-            // If no data from Reservoir, try collection floor
+            // If OpenSea fails or returns no data, try Reservoir as fallback
+            if (floorPrice === 0) {
+              const tokenDetails = await getTokenDetails(
+                nft.contract.address,
+                nft.tokenId
+              );
+
+              if (tokenDetails) {
+                floorPrice = tokenDetails.floorPrice || 0;
+                lastSale = tokenDetails.lastSale || 0;
+              }
+            }
+
+            // If still no data, try collection floor price from Reservoir
             if (floorPrice === 0) {
               const collectionData = await getCollectionFloorPrice(
                 nft.contract.address
