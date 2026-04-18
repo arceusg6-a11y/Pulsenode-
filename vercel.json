@@ -5,13 +5,5 @@
       "src": "package.json",
       "use": "@vercel/next"
     }
-  ],
-,
-"env": {
-    "MONGO_URL": "@mongo_url",
-    "DB_NAME": "@db_name",
-    "ALCHEMY_API_KEY": "@alchemy_api_key",
-    "MORALIS_API_KEY": "@moralis_api_key",
-    "OPENSEA_API_KEY": "@opensea_api_key"
-  }
+  ]
 }
